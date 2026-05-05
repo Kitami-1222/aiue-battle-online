@@ -1301,7 +1301,8 @@ const G = {
   // エフェクト
   audioCtx: null,
   soundEnabled: true,
-  lastAttackedLetters: new Set()
+  lastAttackedLetters: new Set(),
+  lastRenderedPhase: null
 };
 
 /* ====================================================
@@ -1760,7 +1761,7 @@ function submitWord(playerId, wordChars) {
     if (i < wordChars.length) {
       cards.push({ letter: wordChars[i], revealed: false });
     } else {
-      cards.push({ letter: 'X', revealed: false });
+      cards.push({ letter: '×', revealed: false });
     }
   }
   player.cards = cards;
@@ -1821,7 +1822,7 @@ function processAttack(attackerId, letter) {
       hitNames.push(player.name + (revealedHere > 1 ? `×${revealedHere}` : ''));
     }
     // 脱落判定: ×以外の全カードが公開
-    const nonX = player.cards.filter(c => c.letter !== 'X');
+    const nonX = player.cards.filter(c => c.letter !== '×');
     if (nonX.length > 0 && nonX.every(c => c.revealed) && !player.eliminated) {
       player.eliminated = true;
       newlyEliminated.push(player.name);
@@ -2253,11 +2254,18 @@ function renderFromView() {
     showScreen('Word');
     $('wordTopic').textContent = v.topic;
     renderWordSubmitStatus();
-    // 自分が既に提出済みの場合
     const me = v.players.find(p => p.isMe);
-    if (me && me.hasSubmitted) {
-      $('btnSubmitWord').disabled = true;
-      $('btnSubmitWord').textContent = '提出済み';
+    // フェーズ遷移時のみUIを初期化（同フェーズの再描画では自分の入力を保護）
+    if (G.lastRenderedPhase !== 'word_entry') {
+      if (me && me.hasSubmitted) {
+        $('btnSubmitWord').disabled = true;
+        $('btnSubmitWord').textContent = '提出済み';
+      } else {
+        $('btnSubmitWord').disabled = false;
+        $('btnSubmitWord').textContent = 'この言葉で決定';
+        $('inputWord').value = '';
+        updateWordPreview();
+      }
     }
   } else if (v.phase === 'play') {
     showScreen('Play');
@@ -2266,6 +2274,8 @@ function renderFromView() {
     showScreen('End');
     renderEndScreen();
   }
+
+  G.lastRenderedPhase = v.phase;
 }
 
 function renderLobbyFromView() {
@@ -2332,7 +2342,7 @@ function renderPlayScreen() {
   if (me) {
     me.cards.forEach((c, idx) => {
       const div = document.createElement('div');
-      div.className = 'card-mine' + (c.revealed ? ' revealed' : '') + (c.letter === 'X' ? ' x' : '');
+      div.className = 'card-mine' + (c.revealed ? ' revealed' : '') + (c.letter === '×' ? ' x' : '');
       div.innerHTML = `<span class="pos-label">${idx + 1}</span>${c.letter}`;
       myBox.appendChild(div);
     });
@@ -2349,7 +2359,7 @@ function renderPlayScreen() {
     let cardsHtml = '';
     p.cards.forEach((c, idx) => {
       if (c.revealed) {
-        if (c.letter === 'X') {
+        if (c.letter === '×') {
           cardsHtml += `<div class="card-mini x-revealed">×</div>`;
         } else {
           cardsHtml += `<div class="card-mini revealed">${c.letter}</div>`;
@@ -2428,7 +2438,7 @@ function renderEndScreen() {
   $('winnerName').textContent = winner ? winner.name + (winner.isMe ? '（あなた）' : '') : '???';
   // 勝者の言葉
   if (winner && winner.cards.length) {
-    const word = winner.cards.filter(c => c.letter !== 'X' && c.letter !== null).map(c => c.letter).join('');
+    const word = winner.cards.filter(c => c.letter !== '×' && c.letter !== null).map(c => c.letter).join('');
     $('winnerWord').textContent = word;
   } else {
     $('winnerWord').textContent = '';
@@ -2438,7 +2448,7 @@ function renderEndScreen() {
   list.innerHTML = '';
   v.players.forEach(p => {
     const word = p.cards
-      .filter(c => c.letter !== 'X' && c.letter !== null)
+      .filter(c => c.letter !== '×' && c.letter !== null)
       .map(c => c.letter)
       .join('') || '(?)';
 
@@ -2450,7 +2460,7 @@ function renderEndScreen() {
       if (c.letter === null || c.letter === undefined) {
         // フォールバック（state転送に問題があった場合）
         cardsHtml += `<div class="card-mini">?</div>`;
-      } else if (c.letter === 'X') {
+      } else if (c.letter === '×') {
         cardsHtml += `<div class="card-mini x-revealed">×</div>`;
       } else if (c.wasRevealedDuringPlay) {
         // ゲーム中に既に攻撃で公開されていた文字
