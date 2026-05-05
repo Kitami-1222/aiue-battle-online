@@ -1,0 +1,2521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>あいうえバトル オンライン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Klee+One:wght@400;600&family=Reggae+One&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root {
+  --bg-cream: #FBF4E3;
+  --bg-paper: #F5EBD3;
+  --ink: #2A2D52;
+  --ink-soft: #4F567C;
+  --coral: #E8635A;
+  --coral-deep: #C84A42;
+  --mustard: #F4B942;
+  --mint: #6BBFA8;
+  --sky: #5B9BD5;
+  --rose: #E89BAB;
+  --peach: #F2A875;
+  --lavender: #A89BCC;
+  --line: #C9B998;
+  --shadow: rgba(42, 45, 82, 0.15);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg-cream);
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(244, 185, 66, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 90%, rgba(232, 99, 90, 0.08) 0%, transparent 55%);
+  color: var(--ink);
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.18 0 0 0 0 0.32 0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, .display {
+  font-family: "RocknRoll One", "Zen Maru Gothic", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.title-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px dashed var(--line);
+  margin-bottom: 18px;
+}
+
+.title-bar h1 {
+  font-size: clamp(20px, 4vw, 28px);
+  color: var(--coral-deep);
+}
+
+.title-bar .sub {
+  font-family: "Klee One", serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* === ボタン === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--bg-paper);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease, background 120ms;
+  user-select: none;
+}
+.btn:hover { background: #fff; }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: none;
+}
+.btn.primary { background: var(--coral); color: #fff; }
+.btn.primary:hover { background: var(--coral-deep); }
+.btn.accent { background: var(--mustard); }
+.btn.ghost { background: transparent; box-shadow: none; border-color: var(--line); }
+.btn.tiny { padding: 6px 12px; font-size: 13px; box-shadow: 2px 2px 0 var(--ink); }
+.btn.block { width: 100%; }
+
+/* === 入力 === */
+input[type="text"], input[type="number"], textarea, select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  transition: border-color 120ms;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--coral);
+}
+
+label.field {
+  display: block;
+  margin-bottom: 14px;
+}
+label.field > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+/* === カード（パネル） === */
+.panel {
+  background: var(--bg-paper);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 4px 4px 0 var(--ink);
+  margin-bottom: 16px;
+}
+.panel h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+
+/* === ロビー === */
+.lobby-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .lobby-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.player-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.player-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  font-weight: 700;
+}
+.player-chip {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+}
+.player-list .you { color: var(--coral-deep); }
+.player-list .host-mark {
+  margin-left: auto;
+  font-size: 11px;
+  background: var(--mustard);
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--ink);
+}
+
+.room-id {
+  font-family: "RocknRoll One", monospace;
+  font-size: 38px;
+  letter-spacing: 0.18em;
+  color: var(--coral-deep);
+  text-align: center;
+  background: #fff;
+  border: 2px dashed var(--coral);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* === 単語入力 === */
+.word-slots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+.slot {
+  width: 56px; height: 70px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Klee One", serif;
+  font-size: 32px;
+  font-weight: 700;
+  position: relative;
+}
+.slot.empty {
+  background: repeating-linear-gradient(45deg, #fff, #fff 4px, #f0e8d0 4px, #f0e8d0 8px);
+  color: var(--ink-soft);
+}
+.slot.x { color: var(--ink-soft); }
+.slot::after {
+  content: attr(data-pos);
+  position: absolute;
+  bottom: -18px;
+  font-size: 10px;
+  color: var(--ink-soft);
+  font-family: inherit;
+}
+
+/* === ゲーム画面：相手のカード === */
+.opponents {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.opponent {
+  background: var(--bg-paper);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+  position: relative;
+}
+.opponent.eliminated {
+  opacity: 0.55;
+  background: #ddd2b8;
+}
+.opponent.eliminated::before {
+  content: "脱落";
+  position: absolute;
+  top: 8px; right: 12px;
+  font-family: "RocknRoll One", sans-serif;
+  font-size: 18px;
+  color: var(--coral-deep);
+  transform: rotate(8deg);
+  background: #fff;
+  padding: 2px 10px;
+  border: 2px solid var(--coral-deep);
+  border-radius: 6px;
+}
+.opponent.current-turn {
+  outline: 4px solid var(--mustard);
+  outline-offset: 2px;
+}
+.opponent .name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.cards-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.card-mini {
+  width: 36px; height: 46px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--peach);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Klee One", serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+}
+.card-mini.revealed {
+  background: #fff;
+  color: var(--coral-deep);
+  animation: flip 350ms ease;
+}
+.card-mini.x-revealed {
+  background: #fff;
+  color: var(--ink-soft);
+}
+@keyframes flip {
+  0% { transform: rotateY(0); }
+  50% { transform: rotateY(90deg); background: var(--mustard); }
+  100% { transform: rotateY(0); }
+}
+
+/* プレイヤー色のカード */
+.color-rose .card-mini:not(.revealed):not(.x-revealed) { background: var(--rose); }
+.color-sky .card-mini:not(.revealed):not(.x-revealed) { background: var(--sky); }
+.color-mint .card-mini:not(.revealed):not(.x-revealed) { background: var(--mint); }
+.color-peach .card-mini:not(.revealed):not(.x-revealed) { background: var(--peach); }
+.color-lavender .card-mini:not(.revealed):not(.x-revealed) { background: var(--lavender); }
+
+.color-rose .player-chip { background: var(--rose); }
+.color-sky .player-chip { background: var(--sky); }
+.color-mint .player-chip { background: var(--mint); }
+.color-peach .player-chip { background: var(--peach); }
+.color-lavender .player-chip { background: var(--lavender); }
+
+/* === 自分のカード（言葉が見える） === */
+.my-cards {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.card-mine {
+  width: 50px; height: 64px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Klee One", serif;
+  font-size: 26px;
+  font-weight: 700;
+  position: relative;
+}
+.card-mine.revealed {
+  background: var(--coral);
+  color: #fff;
+}
+.card-mine.x { color: var(--ink-soft); background: var(--bg-paper); }
+.card-mine .pos-label {
+  position: absolute;
+  top: -8px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* === 50音ボード === */
+.board {
+  display: grid;
+  gap: 4px;
+  background: #fff;
+  padding: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+.board-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Klee One", serif;
+  font-size: clamp(16px, 3.2vw, 22px);
+  font-weight: 700;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: background 100ms, transform 80ms;
+  position: relative;
+  min-height: 40px;
+}
+.board-cell:hover:not(.disabled):not(.attacked) {
+  background: var(--mustard);
+  transform: scale(1.05);
+}
+.board-cell.attacked {
+  background: var(--bg-paper);
+  color: var(--ink-soft);
+  cursor: default;
+  position: relative;
+}
+.board-cell.attacked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background-image: linear-gradient(to top right, transparent calc(50% - 2px), var(--coral-deep) calc(50% - 2px), var(--coral-deep) calc(50% + 2px), transparent calc(50% + 2px));
+}
+.board-cell.empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+  pointer-events: none;
+}
+.board-cell.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.board-50on {
+  grid-template-rows: repeat(5, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(36px, 1fr);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.board-alpha { grid-template-columns: repeat(7, 1fr); }
+
+/* === 状態表示 === */
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 12px;
+  font-weight: 700;
+}
+.status-row .turn-name {
+  font-family: "RocknRoll One", sans-serif;
+  font-size: 18px;
+  color: var(--mustard);
+}
+.attack-pips {
+  display: inline-flex;
+  gap: 4px;
+}
+.pip {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--mustard);
+}
+.pip.used { background: var(--mustard); }
+
+.topic-banner {
+  background: var(--mustard);
+  color: var(--ink);
+  padding: 12px 18px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  text-align: center;
+  font-family: "RocknRoll One", sans-serif;
+  font-size: 22px;
+  margin-bottom: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.topic-banner small {
+  display: block;
+  font-family: "Zen Maru Gothic", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 2px;
+}
+
+/* === ログ・チャット === */
+.side-panel {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .game-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 16px;
+  }
+}
+.log {
+  background: var(--bg-paper);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 10px 12px;
+  height: 180px;
+  overflow-y: auto;
+  font-size: 13px;
+  font-family: "Klee One", serif;
+}
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(42, 45, 82, 0.15);
+}
+.log-entry.attack, .log-entry.attack-hit { color: var(--coral-deep); font-weight: 700; }
+.log-entry.attack-miss { color: var(--ink-soft); font-weight: 700; }
+.log-entry.hit { color: var(--mint); font-weight: 700; }
+.log-entry.eliminated { color: var(--coral-deep); font-weight: 700; }
+.log-entry.system { color: var(--ink-soft); font-style: italic; }
+.log-entry .who { font-weight: 700; }
+
+.chat {
+  background: var(--bg-paper);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.chat-msgs {
+  height: 140px;
+  overflow-y: auto;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.chat-msg { padding: 3px 0; }
+.chat-msg .from { font-weight: 700; margin-right: 4px; }
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+}
+.chat-input-row input {
+  font-size: 14px;
+  padding: 8px 10px;
+}
+
+/* === モーダル === */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(42, 45, 82, 0.65);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-cream);
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h2 {
+  font-family: "RocknRoll One", sans-serif;
+  font-size: 22px;
+  color: var(--coral-deep);
+  margin-bottom: 12px;
+}
+
+.error-banner {
+  background: var(--coral);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  display: none;
+}
+.error-banner.active { display: block; }
+
+.notice {
+  background: rgba(244, 185, 66, 0.25);
+  border-left: 4px solid var(--mustard);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* === レンダリング小物 === */
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.spread { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.muted { color: var(--ink-soft); font-size: 13px; }
+.small { font-size: 12px; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+
+.toggle-group {
+  display: inline-flex;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.toggle-group button {
+  padding: 8px 14px;
+  border: none;
+  background: #fff;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+.toggle-group button.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.winner-display {
+  text-align: center;
+  padding: 20px;
+}
+.winner-display .crown {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+.winner-display .name {
+  font-family: "RocknRoll One", sans-serif;
+  font-size: 32px;
+  color: var(--coral-deep);
+  margin-bottom: 8px;
+}
+.winner-display .word {
+  font-family: "Klee One", serif;
+  font-size: 22px;
+  color: var(--ink);
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 2px dashed var(--coral);
+  border-radius: 10px;
+  display: inline-block;
+}
+
+/* 答え合わせ */
+.end-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(244, 185, 66, 0.30) 0%, rgba(232, 99, 90, 0.15) 100%);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+.end-summary .crown {
+  font-size: 36px;
+  line-height: 1;
+}
+.end-summary-text {
+  flex: 1;
+  min-width: 0;
+}
+.end-summary-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+.end-summary-name {
+  font-family: "RocknRoll One", sans-serif;
+  font-size: 26px;
+  color: var(--coral-deep);
+  line-height: 1.1;
+}
+.end-summary-word {
+  font-family: "Klee One", serif;
+  font-size: 20px;
+  color: var(--ink);
+  background: #fff;
+  padding: 6px 14px;
+  border: 2px dashed var(--coral);
+  border-radius: 10px;
+}
+
+.end-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.end-row {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.end-row.is-winner {
+  border-color: var(--mustard);
+  border-width: 3px;
+  background: linear-gradient(to right, rgba(244, 185, 66, 0.18), #fff 60%);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.end-row .head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.end-row .head .name {
+  font-weight: 700;
+}
+.end-row .head .word-text {
+  font-family: "Klee One", serif;
+  font-size: 22px;
+  color: var(--coral-deep);
+  margin-left: auto;
+  letter-spacing: 0.04em;
+}
+.end-row .head .badge {
+  background: var(--mustard);
+  color: var(--ink);
+  padding: 2px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+.end-row .head .badge.eliminated {
+  background: #ddd2b8;
+  color: var(--ink-soft);
+}
+.card-mini.end-revealed-late {
+  background: #fff;
+  color: var(--mint);
+  border-color: var(--mint);
+  border-width: 2.5px;
+  position: relative;
+}
+.card-mini.end-revealed-late::after {
+  content: "";
+  position: absolute;
+  top: -3px; right: -3px;
+  width: 8px; height: 8px;
+  background: var(--mint);
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+}
+.end-legend {
+  font-size: 11px;
+  color: var(--ink-soft);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.end-legend .swatch {
+  display: inline-block;
+  width: 12px; height: 12px;
+  vertical-align: middle;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+/* === スピナー（接続中） === */
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid var(--bg-paper);
+  border-top-color: var(--coral);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* === エフェクト === */
+.screen-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0;
+}
+.screen-flash.flash-hit {
+  background: radial-gradient(circle at center, rgba(244, 185, 66, 0.75) 0%, rgba(232, 99, 90, 0.35) 35%, transparent 70%);
+  animation: flash-hit 0.7s ease-out;
+}
+.screen-flash.flash-miss {
+  background: radial-gradient(circle at center, rgba(91, 155, 213, 0.45) 0%, transparent 60%);
+  animation: flash-miss 0.4s ease-out;
+}
+@keyframes flash-hit {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes flash-miss {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.center-text {
+  position: fixed;
+  top: 38%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-family: "RocknRoll One", sans-serif;
+  font-size: clamp(56px, 14vw, 140px);
+  z-index: 300;
+  pointer-events: none;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 6px 6px 0 var(--ink);
+}
+.center-text.hit {
+  color: var(--mustard);
+  animation: pop-hit 0.85s ease-out forwards;
+}
+.center-text.miss {
+  color: #fff;
+  animation: pop-miss 0.65s ease-out forwards;
+}
+.center-text.ko {
+  color: var(--coral);
+  animation: pop-ko 1s ease-out forwards;
+}
+@keyframes pop-hit {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-30deg); opacity: 0; }
+  25% { transform: translate(-50%, -50%) scale(1.4) rotate(12deg); opacity: 1; }
+  45% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); opacity: 1; }
+  65% { transform: translate(-50%, -50%) scale(1.1) rotate(3deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.6) rotate(0); opacity: 0; }
+}
+@keyframes pop-miss {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(0); opacity: 0; }
+  20% { transform: translate(-50%, -50%) scale(1.2) rotate(-3deg); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+}
+@keyframes pop-ko {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-180deg); opacity: 0; }
+  30% { transform: translate(-50%, -50%) scale(1.5) rotate(0); opacity: 1; }
+  60% { transform: translate(-50%, -50%) scale(1.1) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.8) rotate(0); opacity: 0; }
+}
+
+body.shake { animation: body-shake 0.4s ease-in-out; }
+@keyframes body-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-10px) rotate(-0.4deg); }
+  30% { transform: translateX(10px) rotate(0.4deg); }
+  45% { transform: translateX(-7px) rotate(-0.2deg); }
+  60% { transform: translateX(7px) rotate(0.2deg); }
+  75% { transform: translateX(-4px); }
+  90% { transform: translateX(4px); }
+}
+
+.board-cell.just-hit {
+  animation: cell-hit 0.7s ease-out;
+  z-index: 5;
+}
+.board-cell.just-miss {
+  animation: cell-miss 0.5s ease-out;
+}
+@keyframes cell-hit {
+  0% { background: var(--mustard); transform: scale(1); box-shadow: 0 0 0 0 rgba(244, 185, 66, 0.8); }
+  30% { background: var(--coral); transform: scale(1.5); box-shadow: 0 0 32px 12px rgba(244, 185, 66, 0.85); color: #fff; }
+  60% { background: var(--mustard); transform: scale(1.2); box-shadow: 0 0 20px 6px rgba(244, 185, 66, 0.5); }
+  100% { background: var(--bg-paper); transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes cell-miss {
+  0% { background: var(--sky); transform: scale(1); }
+  30% { background: var(--ink-soft); transform: scale(1.1); color: #fff; }
+  100% { background: var(--bg-paper); transform: scale(1); }
+}
+
+.mute-btn {
+  margin-left: auto;
+  background: var(--bg-paper);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  flex-shrink: 0;
+}
+.mute-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="title-bar">
+    <h1>あいうえバトル</h1>
+    <span class="sub">オンライン対戦版 / 2〜5人</span>
+    <button id="btnMute" class="mute-btn" type="button">♪ 音 ON</button>
+  </div>
+
+  <div id="errorBanner" class="error-banner"></div>
+
+  <!-- ====================================== -->
+  <!--    画面1: ホーム（ホスト/参加 選択）     -->
+  <!-- ====================================== -->
+  <section id="screenHome" class="screen active">
+    <div class="panel">
+      <h2>はじめる</h2>
+      <label class="field">
+        <span>あなたの名前</span>
+        <input type="text" id="inputName" maxlength="10" placeholder="（最大10文字）">
+      </label>
+      <div class="row" style="gap: 12px; margin-top: 8px;">
+        <button class="btn primary" id="btnHost">部屋を作る（ホスト）</button>
+        <button class="btn" id="btnJoinShow">部屋に参加する</button>
+      </div>
+    </div>
+
+    <div class="panel" id="joinPanel" style="display: none;">
+      <h2>部屋IDを入力</h2>
+      <label class="field">
+        <span>4文字のRoom ID</span>
+        <input type="text" id="inputRoomId" maxlength="4" style="text-transform: uppercase; letter-spacing: 0.2em; font-family: 'RocknRoll One', monospace; font-size: 22px; text-align: center;">
+      </label>
+      <button class="btn primary block" id="btnJoin">参加</button>
+    </div>
+
+    <div class="panel">
+      <h2>遊び方（要約）</h2>
+      <div class="muted small" style="line-height: 1.7;">
+        お題に沿った2〜7文字の言葉を書いて伏せる→順番に1文字ずつ50音ボードを攻撃→当てた人のカードが公開される→当たれば連続攻撃可能（最大2回）→自分の言葉のカードが全部公開されたら脱落。最後に残った人が勝ち。<br>
+        <strong>表記ルール：</strong>濁点・半濁点は書かない（ぱんだ→はんた）。小文字は大文字に（しゃけ→しやけ）。文字を書かない枠は×。
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================== -->
+  <!--    画面2: ロビー                          -->
+  <!-- ====================================== -->
+  <section id="screenLobby" class="screen">
+    <div class="lobby-grid">
+      <div>
+        <div class="panel">
+          <h2>Room ID</h2>
+          <div class="room-id" id="lobbyRoomId">----</div>
+          <div class="muted small">このIDを友達に伝えてください。LINE等で共有OK。</div>
+          <button class="btn tiny" id="btnCopyId" style="margin-top: 8px;">IDをコピー</button>
+        </div>
+        <div class="panel">
+          <h2>参加者 <span id="playerCount" class="muted small"></span></h2>
+          <ul class="player-list" id="lobbyPlayers"></ul>
+        </div>
+      </div>
+      <div>
+        <div class="panel" id="hostControls" style="display: none;">
+          <h2>ホスト設定</h2>
+          <label class="field">
+            <span>使うボード</span>
+            <div class="toggle-group">
+              <button id="btnMode50" class="active">50音</button>
+              <button id="btnModeAlpha">アルファベット</button>
+            </div>
+          </label>
+          <button class="btn primary block" id="btnStart" style="margin-top: 12px;">ゲーム開始（2人以上必要）</button>
+          <p class="muted small" style="margin-top: 10px;">開始すると、お題と言葉の入力フェーズに進みます。</p>
+        </div>
+        <div class="panel" id="guestNotice" style="display: none;">
+          <h2>ホストの開始を待っています…</h2>
+          <div class="row"><div class="spinner"></div><span class="muted">参加者が揃ったらホストがゲームを開始します。</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================== -->
+  <!--    画面3: お題決定                       -->
+  <!-- ====================================== -->
+  <section id="screenTopic" class="screen">
+    <div class="panel" id="topicHostPanel">
+      <h2>お題を決める</h2>
+      <p class="muted" style="margin-bottom: 12px;">ホストがお題を決めます。お題に沿った2〜7文字の言葉を全員が書きます。</p>
+      <label class="field">
+        <span>お題</span>
+        <input type="text" id="inputTopic" maxlength="20" placeholder="例: 動物 / 食べもの / 行きたい所">
+      </label>
+      <div class="row" style="margin-bottom: 12px;">
+        <button class="btn" id="btnRandomTopic">ランダム選出</button>
+        <button class="btn primary" id="btnConfirmTopic">このお題で決定</button>
+      </div>
+      <div class="muted small">参考: 動物 / 食べもの / 行きたい所 / くだもの / 飲みもの / アニメキャラ / 赤いもの / 丸いもの / スポーツ / 都道府県 …</div>
+    </div>
+    <div class="panel" id="topicGuestPanel" style="display: none;">
+      <h2>ホストがお題を決めています…</h2>
+      <div class="row"><div class="spinner"></div><span class="muted">少々お待ちください</span></div>
+    </div>
+  </section>
+
+  <!-- ====================================== -->
+  <!--    画面4: 言葉入力                       -->
+  <!-- ====================================== -->
+  <section id="screenWord" class="screen">
+    <div class="topic-banner">
+      <small>お題</small>
+      <span id="wordTopic">---</span>
+    </div>
+    <div class="panel">
+      <h2>言葉を書く</h2>
+      <p class="muted small" style="margin-bottom: 12px;">
+        2〜7文字の言葉を入力してください。濁点・半濁点・小文字は自動で変換されます。
+      </p>
+      <label class="field">
+        <span>言葉（あなただけが見られます）</span>
+        <input type="text" id="inputWord" maxlength="14" placeholder="例: ぱんだ → はんた">
+      </label>
+      <div class="word-slots" id="wordPreview"></div>
+      <p class="muted small" id="wordValidation" style="margin-bottom: 12px;"></p>
+      <button class="btn primary block" id="btnSubmitWord">この言葉で決定</button>
+    </div>
+    <div class="panel">
+      <h2>提出状況</h2>
+      <ul class="player-list" id="wordSubmitStatus"></ul>
+    </div>
+  </section>
+
+  <!-- ====================================== -->
+  <!--    画面5: 対戦中                          -->
+  <!-- ====================================== -->
+  <section id="screenPlay" class="screen">
+    <div class="topic-banner">
+      <small>お題</small>
+      <span id="playTopic">---</span>
+    </div>
+
+    <div class="status-row">
+      <div>手番: <span class="turn-name" id="turnName">---</span></div>
+      <div>
+        攻撃: <span class="attack-pips" id="attackPips"></span>
+      </div>
+    </div>
+
+    <div class="game-layout">
+      <div>
+        <div class="panel">
+          <h2>あなたの言葉</h2>
+          <div class="my-cards" id="myCards"></div>
+        </div>
+
+        <div class="panel">
+          <h2>相手のカード</h2>
+          <div class="opponents" id="opponentsList"></div>
+        </div>
+
+        <div class="panel">
+          <h2 id="boardTitle">50音ボード</h2>
+          <p class="muted small" style="margin-bottom: 10px;" id="boardHint">
+            自分の手番のとき、文字をタップして攻撃。
+          </p>
+          <div class="board board-50on" id="boardGrid"></div>
+        </div>
+      </div>
+
+      <div class="side-panel">
+        <div>
+          <h3 style="margin-bottom: 8px; font-size: 14px; color: var(--ink-soft);">攻撃ログ</h3>
+          <div class="log" id="logBox"></div>
+        </div>
+        <div>
+          <h3 style="margin-bottom: 8px; font-size: 14px; color: var(--ink-soft);">チャット</h3>
+          <div class="chat">
+            <div class="chat-msgs" id="chatBox"></div>
+            <div class="chat-input-row">
+              <input type="text" id="chatInput" maxlength="100" placeholder="メッセージ">
+              <button class="btn tiny" id="btnSendChat">送信</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================== -->
+  <!--    画面6: ラウンド終了                    -->
+  <!-- ====================================== -->
+  <section id="screenEnd" class="screen">
+    <div class="panel">
+      <div class="end-summary">
+        <span class="crown">👑</span>
+        <div class="end-summary-text">
+          <div class="end-summary-label">勝者</div>
+          <div class="end-summary-name" id="winnerName">---</div>
+        </div>
+        <div class="end-summary-word" id="winnerWord"></div>
+      </div>
+
+      <h2 style="margin-top: 18px;">全員の答え合わせ</h2>
+      <div class="end-grid" id="endPlayerList"></div>
+      <div class="end-legend">
+        <span><span class="swatch" style="background: #fff; border-color: var(--coral-deep);"></span>公開済みだった文字</span>
+        <span><span class="swatch" style="background: #fff; border-color: var(--mint);"></span>最後まで隠せていた文字</span>
+        <span><span class="swatch" style="background: var(--bg-paper);"></span>×（空き枠）</span>
+      </div>
+    </div>
+
+    <div class="panel" id="endHostPanel" style="display: none;">
+      <button class="btn primary block" id="btnNewRound">新しいラウンドを始める</button>
+    </div>
+    <div class="panel" id="endGuestPanel" style="display: none;">
+      <p class="muted">ホストが新ラウンドを開始するのを待っています…</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- 確認モーダル -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">確認</h2>
+    <p id="modalMsg" style="margin-bottom: 16px; line-height: 1.7;"></p>
+    <div class="row" style="justify-content: flex-end;">
+      <button class="btn ghost" id="modalCancel">キャンセル</button>
+      <button class="btn primary" id="modalOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- エフェクトレイヤー -->
+<div id="screenFlash" class="screen-flash"></div>
+<div id="centerText" class="center-text"></div>
+
+<script>
+"use strict";
+
+/* ====================================================
+ * 定数
+ * ==================================================== */
+
+const HIRAGANA_BOARD = [
+  ['あ','い','う','え','お'],
+  ['か','き','く','け','こ'],
+  ['さ','し','す','せ','そ'],
+  ['た','ち','つ','て','と'],
+  ['な','に','ぬ','ね','の'],
+  ['は','ひ','ふ','へ','ほ'],
+  ['ま','み','む','め','も'],
+  ['や','',  'ゆ','',  'よ'],
+  ['ら','り','る','れ','ろ'],
+  ['わ','',  'を','',  'ん'],
+  ['ー','',  '',  '',  '']
+];
+
+const ALPHABET_BOARD = [
+  ['A','B','C','D','E','F','G'],
+  ['H','I','J','K','L','M','N'],
+  ['O','P','Q','R','S','T','U'],
+  ['V','W','X','Y','Z','',  '']
+];
+
+const HIRAGANA_SET = (() => {
+  const s = new Set();
+  HIRAGANA_BOARD.forEach(row => row.forEach(ch => { if (ch) s.add(ch); }));
+  return s;
+})();
+
+const ALPHABET_SET = (() => {
+  const s = new Set();
+  ALPHABET_BOARD.forEach(row => row.forEach(ch => { if (ch) s.add(ch); }));
+  return s;
+})();
+
+const PLAYER_COLORS = ['rose','sky','mint','peach','lavender'];
+const COLOR_LABEL = { rose:'ピンク', sky:'スカイ', mint:'ミント', peach:'ピーチ', lavender:'ラベンダー' };
+
+const TOPIC_LIST_JP = [
+  '動物','食べもの','くだもの','飲みもの','スポーツ','色',
+  '行きたい所','日本の都道府県','世界の国','芸能人','アニメキャラ',
+  '楽器','乗りもの','花','魚','鳥','虫','体の部分',
+  '家にあるもの','台所にあるもの','学校にあるもの','公園にあるもの',
+  '夏といえば','冬といえば','丸いもの','赤いもの','青いもの','白いもの',
+  '硬いもの','柔らかいもの','甘いもの','辛いもの',
+  'マンガのタイトル','ゲームのタイトル','映画のタイトル','歌のタイトル',
+  '苗字','都市の名前','プロ野球の球団','ポケモン','寿司ネタ',
+  '駅の名前','カタカナの言葉','3文字の言葉','4文字の言葉','コンビニにあるもの'
+];
+
+const TOPIC_LIST_EN = [
+  'Animals','Food','Fruits','Drinks','Sports','Colors',
+  'Countries','Cities','Movies','Songs','Musical instruments',
+  'Vehicles','Flowers','Fish','Birds','Insects','Body parts',
+  'Things in the kitchen','Things at school','Summer','Winter',
+  'Round things','Red things','Hard things','Sweet things',
+  'Movie titles','Game titles','First names','Ocean things'
+];
+
+/* ====================================================
+ * 文字列正規化（清音化）
+ * ==================================================== */
+
+const DAKUTEN_MAP = {
+  'が':'か','ぎ':'き','ぐ':'く','げ':'け','ご':'こ',
+  'ざ':'さ','じ':'し','ず':'す','ぜ':'せ','ぞ':'そ',
+  'だ':'た','ぢ':'ち','づ':'つ','で':'て','ど':'と',
+  'ば':'は','び':'ひ','ぶ':'ふ','べ':'へ','ぼ':'ほ',
+  'ぱ':'は','ぴ':'ひ','ぷ':'ふ','ぺ':'へ','ぽ':'ほ',
+  'ヴ':'う',
+  'ゃ':'や','ゅ':'ゆ','ょ':'よ','っ':'つ',
+  'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お'
+};
+
+function normalizeChar(ch, mode) {
+  if (mode === 'alphabet') {
+    const u = ch.toUpperCase();
+    return ALPHABET_SET.has(u) ? u : null;
+  }
+  // ひらがなモード
+  // カタカナ→ひらがな
+  let c = ch;
+  const code = c.charCodeAt(0);
+  if (code >= 0x30A1 && code <= 0x30F6) {
+    c = String.fromCharCode(code - 0x60);
+  }
+  if (DAKUTEN_MAP[c]) c = DAKUTEN_MAP[c];
+  if (HIRAGANA_SET.has(c)) return c;
+  return null;
+}
+
+function normalizeWord(input, mode) {
+  const out = [];
+  for (const ch of input) {
+    const n = normalizeChar(ch, mode);
+    if (n) out.push(n);
+  }
+  return out;
+}
+
+/* ====================================================
+ * 通信プロトコル
+ *
+ * クライアント→ホスト:
+ *   { t: 'hello', name: string }
+ *   { t: 'submit_word', word: string[] }
+ *   { t: 'attack', letter: string }
+ *   { t: 'chat', text: string }
+ *   { t: 'set_mode', mode: 'hiragana'|'alphabet' }   // ホストのみ反映
+ *   { t: 'request_start_game' }                       // ホストのみ
+ *   { t: 'set_topic', topic: string }                 // ホストのみ
+ *   { t: 'request_new_round' }                        // ホストのみ
+ *
+ * ホスト→クライアント:
+ *   { t: 'state', state: filteredState, you: playerId }
+ *   { t: 'log', entry: {kind, ...} }
+ *   { t: 'chat', from: string, text: string }
+ *   { t: 'kicked', reason: string }
+ *   { t: 'error', msg: string }
+ *
+ * ==================================================== */
+
+/* ====================================================
+ * グローバル状態
+ * ==================================================== */
+
+const G = {
+  peer: null,
+  isHost: false,
+  myId: null,           // PeerJS自分のID
+  myName: '',
+  hostConn: null,       // ゲスト時: ホストへのDataConnection
+  clients: new Map(),   // ホスト時: playerId -> { conn, name }
+  roomId: null,
+
+  // ホスト用ゲーム状態（authoritative）
+  game: null,
+
+  // クライアント用受信状態
+  view: null,
+  myPlayerId: null,
+  mode: 'hiragana',     // ホストのみ用
+
+  // エフェクト
+  audioCtx: null,
+  soundEnabled: true,
+  lastAttackedLetters: new Set()
+};
+
+/* ====================================================
+ * ホスト用ゲームステート初期化
+ * ==================================================== */
+
+function createInitialGame() {
+  return {
+    phase: 'lobby',  // 'lobby' | 'topic' | 'word_entry' | 'play' | 'round_end'
+    mode: 'hiragana',
+    topic: '',
+    players: [],     // [{ id, name, color, cards: [{letter, revealed}], eliminated, hasSubmitted }]
+    currentTurn: 0,
+    attacksThisTurn: 0,
+    attackedLetters: [],
+    lastAttacker: 0,
+    winner: null,
+    log: []
+  };
+}
+
+/* ====================================================
+ * ID生成（4文字Room ID）
+ * ==================================================== */
+
+function generateRoomId() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // 紛らわしい文字を除外
+  let s = '';
+  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+function peerIdFor(roomId, role, sub) {
+  // role: 'host' | 'client'
+  // sub: client用の追加識別子
+  if (role === 'host') return `aiue-${roomId}-host`;
+  return `aiue-${roomId}-c-${sub}`;
+}
+
+/* ====================================================
+ * UI ユーティリティ
+ * ==================================================== */
+
+const $ = (id) => document.getElementById(id);
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $('screen' + name).classList.add('active');
+}
+
+function showError(msg) {
+  const e = $('errorBanner');
+  e.textContent = msg;
+  e.classList.add('active');
+  setTimeout(() => e.classList.remove('active'), 5000);
+}
+
+function modalConfirm(title, msg) {
+  return new Promise((resolve) => {
+    $('modalTitle').textContent = title;
+    $('modalMsg').textContent = msg;
+    $('modalOverlay').classList.add('active');
+    const ok = $('modalOk'), cancel = $('modalCancel');
+    const cleanup = (v) => {
+      $('modalOverlay').classList.remove('active');
+      ok.onclick = null;
+      cancel.onclick = null;
+      resolve(v);
+    };
+    ok.onclick = () => cleanup(true);
+    cancel.onclick = () => cleanup(false);
+  });
+}
+
+/* ====================================================
+ * ホーム画面
+ * ==================================================== */
+
+$('btnHost').onclick = async () => {
+  const name = $('inputName').value.trim();
+  if (!name) { showError('名前を入力してください'); return; }
+  G.myName = name;
+  await startAsHost();
+};
+
+$('btnJoinShow').onclick = () => {
+  if (!$('inputName').value.trim()) { showError('名前を入力してください'); return; }
+  $('joinPanel').style.display = 'block';
+};
+
+$('btnJoin').onclick = async () => {
+  const name = $('inputName').value.trim();
+  const roomId = $('inputRoomId').value.trim().toUpperCase();
+  if (!name) { showError('名前を入力してください'); return; }
+  if (roomId.length !== 4) { showError('Room IDは4文字です'); return; }
+  G.myName = name;
+  G.roomId = roomId;
+  await joinAsClient(roomId);
+};
+
+/* ====================================================
+ * ホストセットアップ
+ * ==================================================== */
+
+async function startAsHost() {
+  G.isHost = true;
+  G.roomId = generateRoomId();
+  const peerId = peerIdFor(G.roomId, 'host');
+
+  G.peer = new Peer(peerId, { debug: 1 });
+  G.peer.on('open', (id) => {
+    G.myId = id;
+    G.game = createInitialGame();
+
+    // ホスト自身もプレイヤーとして登録
+    const meId = `host-${Math.random().toString(36).slice(2, 8)}`;
+    G.myPlayerId = meId;
+    G.game.players.push({
+      id: meId,
+      name: G.myName,
+      color: PLAYER_COLORS[0],
+      cards: [],
+      eliminated: false,
+      hasSubmitted: false,
+      isHost: true
+    });
+
+    showScreen('Lobby');
+    $('lobbyRoomId').textContent = G.roomId;
+    $('hostControls').style.display = 'block';
+    renderLobby();
+  });
+
+  G.peer.on('connection', (conn) => {
+    setupHostConnHandlers(conn);
+  });
+
+  G.peer.on('error', (err) => {
+    console.error('Peer error:', err);
+    showError('接続エラー: ' + err.type);
+  });
+}
+
+function setupHostConnHandlers(conn) {
+  conn.on('open', () => {
+    // クライアントが接続。helloメッセージを待つ
+  });
+  conn.on('data', (msg) => {
+    handleHostMessage(conn, msg);
+  });
+  conn.on('close', () => {
+    // 切断
+    const playerId = [...G.clients.entries()].find(([_, v]) => v.conn === conn)?.[0];
+    if (playerId) {
+      G.clients.delete(playerId);
+      const idx = G.game.players.findIndex(p => p.id === playerId);
+      if (idx >= 0) {
+        const player = G.game.players[idx];
+        if (G.game.phase === 'lobby') {
+          // ロビーなら削除
+          G.game.players.splice(idx, 1);
+        } else {
+          // 進行中なら脱落扱い
+          player.eliminated = true;
+          addLog({ kind: 'system', text: `${player.name} が切断しました（脱落扱い）` });
+        }
+        renderLobby();
+        broadcastState();
+      }
+    }
+  });
+}
+
+function handleHostMessage(conn, msg) {
+  if (msg.t === 'hello') {
+    // 新規参加
+    if (G.game.phase !== 'lobby') {
+      conn.send({ t: 'kicked', reason: 'ゲーム開始済みです' });
+      return;
+    }
+    if (G.game.players.length >= 5) {
+      conn.send({ t: 'kicked', reason: '満員（5人）です' });
+      return;
+    }
+    const playerId = `c-${Math.random().toString(36).slice(2, 8)}`;
+    const colorIdx = G.game.players.length;
+    G.game.players.push({
+      id: playerId,
+      name: msg.name.slice(0, 10),
+      color: PLAYER_COLORS[colorIdx],
+      cards: [],
+      eliminated: false,
+      hasSubmitted: false,
+      isHost: false
+    });
+    G.clients.set(playerId, { conn, name: msg.name });
+    conn._playerId = playerId;
+    conn.send({ t: 'welcome', playerId });
+    renderLobby();
+    broadcastState();
+    return;
+  }
+
+  const playerId = conn._playerId;
+  if (!playerId) return;
+
+  if (msg.t === 'chat') {
+    broadcastChat(playerId, msg.text);
+    return;
+  }
+
+  if (msg.t === 'submit_word') {
+    if (G.game.phase !== 'word_entry') return;
+    submitWord(playerId, msg.word);
+    return;
+  }
+
+  if (msg.t === 'attack') {
+    if (G.game.phase !== 'play') return;
+    const currentPlayer = G.game.players[G.game.currentTurn];
+    if (currentPlayer.id !== playerId) return;
+    processAttack(playerId, msg.letter);
+    return;
+  }
+}
+
+/* ====================================================
+ * クライアントセットアップ
+ * ==================================================== */
+
+async function joinAsClient(roomId) {
+  G.isHost = false;
+  G.roomId = roomId;
+
+  const myPeerId = `aiue-${roomId}-c-${Math.random().toString(36).slice(2, 8)}`;
+  G.peer = new Peer(myPeerId, { debug: 1 });
+
+  G.peer.on('open', (id) => {
+    G.myId = id;
+    const hostPeerId = peerIdFor(roomId, 'host');
+    G.hostConn = G.peer.connect(hostPeerId, { reliable: true });
+    G.hostConn.on('open', () => {
+      G.hostConn.send({ t: 'hello', name: G.myName });
+    });
+    G.hostConn.on('data', (msg) => handleClientMessage(msg));
+    G.hostConn.on('close', () => {
+      showError('ホストとの接続が切れました');
+    });
+    G.hostConn.on('error', (err) => {
+      console.error('host conn error:', err);
+      showError('ホスト接続エラー: ' + err.type);
+    });
+  });
+
+  G.peer.on('error', (err) => {
+    console.error('peer error:', err);
+    if (err.type === 'peer-unavailable') {
+      showError('部屋が見つかりません。Room IDを確認してください');
+    } else {
+      showError('接続エラー: ' + err.type);
+    }
+  });
+}
+
+function handleClientMessage(msg) {
+  if (msg.t === 'welcome') {
+    G.myPlayerId = msg.playerId;
+    showScreen('Lobby');
+    $('lobbyRoomId').textContent = G.roomId;
+    $('guestNotice').style.display = 'block';
+    return;
+  }
+  if (msg.t === 'kicked') {
+    showError(msg.reason);
+    setTimeout(() => location.reload(), 2000);
+    return;
+  }
+  if (msg.t === 'state') {
+    G.view = msg.state;
+    renderFromView();
+    return;
+  }
+  if (msg.t === 'log') {
+    appendLogEntry(msg.entry);
+    return;
+  }
+  if (msg.t === 'chat') {
+    appendChatMsg(msg.from, msg.text);
+    return;
+  }
+  if (msg.t === 'error') {
+    showError(msg.msg);
+    return;
+  }
+}
+
+/* ====================================================
+ * ホスト: 状態フィルタ＆ブロードキャスト
+ * ==================================================== */
+
+function buildFilteredState(forPlayerId) {
+  const g = G.game;
+  const fullReveal = g.phase === 'round_end';  // ラウンド終了時は全員のカードを答え合わせ用に公開
+  return {
+    phase: g.phase,
+    mode: g.mode,
+    topic: g.topic,
+    currentTurn: g.currentTurn,
+    attacksThisTurn: g.attacksThisTurn,
+    attackedLetters: [...g.attackedLetters],
+    lastAttack: g.lastAttack || null,
+    winner: g.winner,
+    players: g.players.map(p => {
+      // 自分の場合は全カード見える、他人は revealed のみ（ただし round_end では全公開）
+      if (p.id === forPlayerId) {
+        return {
+          id: p.id, name: p.name, color: p.color,
+          cards: p.cards.map(c => ({
+            letter: c.letter,
+            revealed: c.revealed,
+            wasRevealedDuringPlay: c.wasRevealedDuringPlay
+          })),
+          eliminated: p.eliminated,
+          hasSubmitted: p.hasSubmitted,
+          isHost: p.isHost,
+          isMe: true
+        };
+      }
+      return {
+        id: p.id, name: p.name, color: p.color,
+        cards: p.cards.map(c => ({
+          letter: (c.revealed || fullReveal) ? c.letter : null,
+          revealed: c.revealed,
+          wasRevealedDuringPlay: c.wasRevealedDuringPlay
+        })),
+        cardCount: p.cards.length,
+        eliminated: p.eliminated,
+        hasSubmitted: p.hasSubmitted,
+        isHost: p.isHost,
+        isMe: false
+      };
+    })
+  };
+}
+
+function broadcastState() {
+  // 各クライアントへ
+  for (const [pid, info] of G.clients) {
+    try {
+      info.conn.send({ t: 'state', state: buildFilteredState(pid), you: pid });
+    } catch (e) { console.error(e); }
+  }
+  // ホスト自身のビュー
+  G.view = buildFilteredState(G.myPlayerId);
+  renderFromView();
+}
+
+function broadcastChat(fromPlayerId, text) {
+  const player = G.game.players.find(p => p.id === fromPlayerId);
+  if (!player) return;
+  const safeText = text.slice(0, 100);
+  // 全員に送信
+  for (const [pid, info] of G.clients) {
+    try {
+      info.conn.send({ t: 'chat', from: player.name, text: safeText });
+    } catch (e) {}
+  }
+  // ホスト自身も表示
+  appendChatMsg(player.name, safeText);
+}
+
+function broadcastLog(entry) {
+  for (const [pid, info] of G.clients) {
+    try { info.conn.send({ t: 'log', entry }); } catch (e) {}
+  }
+  appendLogEntry(entry);
+}
+
+function addLog(entry) {
+  G.game.log.push(entry);
+  broadcastLog(entry);
+}
+
+/* ====================================================
+ * ホスト: ロビー操作
+ * ==================================================== */
+
+$('btnMode50').onclick = () => setHostMode('hiragana');
+$('btnModeAlpha').onclick = () => setHostMode('alphabet');
+
+function setHostMode(mode) {
+  if (!G.isHost) return;
+  G.game.mode = mode;
+  $('btnMode50').classList.toggle('active', mode === 'hiragana');
+  $('btnModeAlpha').classList.toggle('active', mode === 'alphabet');
+  broadcastState();
+}
+
+$('btnCopyId').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(G.roomId);
+    $('btnCopyId').textContent = 'コピーしました';
+    setTimeout(() => { $('btnCopyId').textContent = 'IDをコピー'; }, 1500);
+  } catch (e) {
+    showError('コピーに失敗しました');
+  }
+};
+
+$('btnStart').onclick = () => {
+  if (!G.isHost) return;
+  if (G.game.players.length < 2) {
+    showError('2人以上必要です');
+    return;
+  }
+  G.game.phase = 'topic';
+  showScreen('Topic');
+  $('topicHostPanel').style.display = 'block';
+  $('topicGuestPanel').style.display = 'none';
+  broadcastState();
+};
+
+$('btnRandomTopic').onclick = () => {
+  const list = G.game.mode === 'alphabet' ? TOPIC_LIST_EN : TOPIC_LIST_JP;
+  const t = list[Math.floor(Math.random() * list.length)];
+  $('inputTopic').value = t;
+};
+
+$('btnConfirmTopic').onclick = () => {
+  const t = $('inputTopic').value.trim();
+  if (!t) { showError('お題を入力してください'); return; }
+  G.game.topic = t.slice(0, 20);
+  G.game.phase = 'word_entry';
+  // プレイヤーの提出状態をリセット
+  G.game.players.forEach(p => { p.hasSubmitted = false; p.cards = []; });
+  addLog({ kind: 'system', text: `お題: 「${G.game.topic}」` });
+  broadcastState();
+};
+
+/* ====================================================
+ * 言葉提出
+ * ==================================================== */
+
+function submitWord(playerId, wordChars) {
+  // 検証
+  if (!Array.isArray(wordChars) || wordChars.length < 2 || wordChars.length > 7) return;
+  const validSet = G.game.mode === 'alphabet' ? ALPHABET_SET : HIRAGANA_SET;
+  for (const c of wordChars) {
+    if (!validSet.has(c)) return;
+  }
+  const player = G.game.players.find(p => p.id === playerId);
+  if (!player || player.hasSubmitted) return;
+
+  // カード生成: 単語 + ×埋め (合計7枚)
+  const cards = [];
+  for (let i = 0; i < 7; i++) {
+    if (i < wordChars.length) {
+      cards.push({ letter: wordChars[i], revealed: false });
+    } else {
+      cards.push({ letter: 'X', revealed: false });
+    }
+  }
+  player.cards = cards;
+  player.hasSubmitted = true;
+
+  broadcastState();
+
+  // 全員提出済みなら開始
+  if (G.game.players.every(p => p.hasSubmitted)) {
+    startPlayPhase();
+  }
+}
+
+function startPlayPhase() {
+  G.game.phase = 'play';
+  G.game.currentTurn = 0;
+  G.game.attacksThisTurn = 0;
+  G.game.attackedLetters = [];
+  G.game.lastAttacker = 0;
+  G.game.winner = null;
+  // プレイヤー脱落フラグもリセット
+  G.game.players.forEach(p => { p.eliminated = false; });
+  addLog({ kind: 'system', text: '全員の準備完了！ゲーム開始！' });
+  broadcastState();
+}
+
+/* ====================================================
+ * 攻撃処理（ホスト側 authoritative）
+ * ==================================================== */
+
+function processAttack(attackerId, letter) {
+  const g = G.game;
+  if (g.attackedLetters.includes(letter)) return;
+  const validSet = g.mode === 'alphabet' ? ALPHABET_SET : HIRAGANA_SET;
+  if (!validSet.has(letter)) return;
+
+  const attackerIdx = g.players.findIndex(p => p.id === attackerId);
+  const attacker = g.players[attackerIdx];
+
+  g.attackedLetters.push(letter);
+  g.lastAttacker = attackerIdx;
+  // 各プレイヤーをチェック
+  let totalReveals = 0;
+  const hitNames = [];
+  const newlyEliminated = [];
+
+  for (const player of g.players) {
+    if (player.eliminated) continue;
+    let revealedHere = 0;
+    for (let i = 0; i < player.cards.length; i++) {
+      if (player.cards[i].letter === letter && !player.cards[i].revealed) {
+        player.cards[i].revealed = true;
+        revealedHere++;
+        totalReveals++;
+      }
+    }
+    if (revealedHere > 0) {
+      hitNames.push(player.name + (revealedHere > 1 ? `×${revealedHere}` : ''));
+    }
+    // 脱落判定: ×以外の全カードが公開
+    const nonX = player.cards.filter(c => c.letter !== 'X');
+    if (nonX.length > 0 && nonX.every(c => c.revealed) && !player.eliminated) {
+      player.eliminated = true;
+      newlyEliminated.push(player.name);
+    }
+  }
+
+  g.attacksThisTurn += 1;
+
+  // 直近の攻撃結果をstateに記録（演出用）
+  g.lastAttack = { letter, hit: totalReveals > 0, ts: Date.now() };
+
+  // ログ
+  if (totalReveals > 0) {
+    addLog({
+      kind: 'attack-hit',
+      text: `${attacker.name} が「${letter}」を攻撃 → ヒット！${hitNames.join('、')}`
+    });
+  } else {
+    addLog({
+      kind: 'attack-miss',
+      text: `${attacker.name} が「${letter}」を攻撃 → 誰も持っていない（外れ）`
+    });
+  }
+  newlyEliminated.forEach(name => {
+    addLog({ kind: 'eliminated', text: `${name} 脱落！` });
+  });
+
+  // 勝敗判定
+  const remaining = g.players.filter(p => !p.eliminated);
+  if (remaining.length === 1) {
+    g.winner = remaining[0].id;
+    g.phase = 'round_end';
+    revealAllCardsForAnswerCheck(g);
+    addLog({ kind: 'system', text: `${remaining[0].name} の勝利！` });
+    broadcastState();
+    return;
+  }
+  if (remaining.length === 0) {
+    // 同時脱落 → 最後の攻撃者勝ち（脱落していても）
+    g.winner = attacker.id;
+    g.phase = 'round_end';
+    revealAllCardsForAnswerCheck(g);
+    addLog({ kind: 'system', text: `全員同時脱落！最後に攻撃した ${attacker.name} の勝利！` });
+    broadcastState();
+    return;
+  }
+
+  // 攻撃継続判定
+  if (totalReveals > 0 && g.attacksThisTurn < 2 && !attacker.eliminated) {
+    // 同じプレイヤーが続行
+  } else {
+    // 次のプレイヤーへ
+    advanceTurn();
+  }
+
+  broadcastState();
+}
+
+function advanceTurn() {
+  const g = G.game;
+  g.attacksThisTurn = 0;
+  let next = g.currentTurn;
+  for (let i = 0; i < g.players.length; i++) {
+    next = (next + 1) % g.players.length;
+    if (!g.players[next].eliminated) {
+      g.currentTurn = next;
+      return;
+    }
+  }
+}
+
+// ラウンド終了時、答え合わせのために全カードを公開する。
+// 元のrevealed状態を wasRevealedDuringPlay に保存して、UIで色分けに使う。
+function revealAllCardsForAnswerCheck(g) {
+  g.players.forEach(p => {
+    p.cards.forEach(c => {
+      if (c.wasRevealedDuringPlay === undefined) {
+        c.wasRevealedDuringPlay = c.revealed;
+      }
+      c.revealed = true;
+    });
+  });
+}
+
+/* ====================================================
+ * 新ラウンド開始
+ * ==================================================== */
+
+$('btnNewRound').onclick = () => {
+  if (!G.isHost) return;
+  G.game.phase = 'topic';
+  G.game.topic = '';
+  G.game.attackedLetters = [];
+  G.game.attacksThisTurn = 0;
+  G.game.currentTurn = 0;
+  G.game.winner = null;
+  G.game.players.forEach(p => {
+    p.cards = [];
+    p.eliminated = false;
+    p.hasSubmitted = false;
+  });
+  addLog({ kind: 'system', text: '新ラウンド開始！お題決定中…' });
+  showScreen('Topic');
+  $('topicHostPanel').style.display = 'block';
+  $('topicGuestPanel').style.display = 'none';
+  $('inputTopic').value = '';
+  broadcastState();
+};
+
+/* ====================================================
+ * 言葉入力UI
+ * ==================================================== */
+
+$('inputWord').oninput = updateWordPreview;
+function updateWordPreview() {
+  const raw = $('inputWord').value;
+  const mode = G.view ? G.view.mode : 'hiragana';
+  const chars = normalizeWord(raw, mode);
+  const slots = $('wordPreview');
+  slots.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const div = document.createElement('div');
+    div.className = 'slot';
+    div.dataset.pos = String(i + 1);
+    if (i < chars.length) {
+      div.textContent = chars[i];
+    } else if (chars.length >= 2) {
+      div.classList.add('x');
+      div.textContent = '×';
+    } else {
+      div.classList.add('empty');
+    }
+    slots.appendChild(div);
+  }
+  const v = $('wordValidation');
+  if (chars.length < 2) {
+    v.textContent = `あと${2 - chars.length}文字以上必要です`;
+    v.style.color = 'var(--coral-deep)';
+  } else if (chars.length > 7) {
+    v.textContent = '7文字以下にしてください';
+    v.style.color = 'var(--coral-deep)';
+  } else {
+    v.textContent = `OK（${chars.length}文字）`;
+    v.style.color = 'var(--mint)';
+  }
+}
+
+$('btnSubmitWord').onclick = () => {
+  const raw = $('inputWord').value;
+  const mode = G.view ? G.view.mode : 'hiragana';
+  const chars = normalizeWord(raw, mode);
+  if (chars.length < 2 || chars.length > 7) {
+    showError('2〜7文字の言葉を入力してください');
+    return;
+  }
+  if (G.isHost) {
+    submitWord(G.myPlayerId, chars);
+  } else {
+    G.hostConn.send({ t: 'submit_word', word: chars });
+  }
+  $('btnSubmitWord').disabled = true;
+  $('btnSubmitWord').textContent = '提出済み';
+};
+
+/* ====================================================
+ * 攻撃UI
+ * ==================================================== */
+
+function attemptAttack(letter) {
+  if (!G.view) return;
+  if (G.view.phase !== 'play') return;
+  const me = G.view.players.find(p => p.isMe);
+  const cur = G.view.players[G.view.currentTurn];
+  if (cur.id !== me.id) return;
+  if (G.view.attackedLetters.includes(letter)) return;
+
+  if (G.isHost) {
+    processAttack(G.myPlayerId, letter);
+  } else {
+    G.hostConn.send({ t: 'attack', letter });
+  }
+}
+
+/* ====================================================
+ * チャット
+ * ==================================================== */
+
+$('btnSendChat').onclick = sendChat;
+$('chatInput').onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
+
+function sendChat() {
+  const text = $('chatInput').value.trim();
+  if (!text) return;
+  $('chatInput').value = '';
+  if (G.isHost) {
+    broadcastChat(G.myPlayerId, text);
+  } else {
+    G.hostConn.send({ t: 'chat', text });
+  }
+}
+
+function appendChatMsg(from, text) {
+  const box = $('chatBox');
+  const div = document.createElement('div');
+  div.className = 'chat-msg';
+  div.innerHTML = `<span class="from">${escapeHtml(from)}:</span>${escapeHtml(text)}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function appendLogEntry(entry) {
+  const box = $('logBox');
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + (entry.kind || 'system');
+  div.textContent = entry.text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+
+  // エフェクト発火
+  if (entry.kind === 'attack-hit') {
+    fireHitEffect();
+  } else if (entry.kind === 'attack-miss') {
+    fireMissEffect();
+  } else if (entry.kind === 'eliminated') {
+    // 脱落時はHIT!演出が終わった頃にKO演出
+    setTimeout(() => fireKoEffect(entry.text), 950);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ====================================================
+ * エフェクト: 効果音（Web Audio合成）と画面演出
+ * ==================================================== */
+
+function ensureAudio() {
+  if (!G.audioCtx) {
+    try {
+      G.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.warn('AudioContext unavailable', e);
+      return null;
+    }
+  }
+  if (G.audioCtx.state === 'suspended') {
+    G.audioCtx.resume().catch(() => {});
+  }
+  return G.audioCtx;
+}
+
+function playHitSound() {
+  if (!G.soundEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  // C5, E5, G5, C6 を順に短く（明るい上昇アルペジオ）
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  notes.forEach((freq, i) => {
+    const t0 = now + i * 0.055;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(0.22, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.45);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.5);
+  });
+  // キラッという高音のスパークル
+  const sparkle = ctx.createOscillator();
+  const sg = ctx.createGain();
+  sparkle.type = 'sine';
+  sparkle.frequency.setValueAtTime(2400, now + 0.05);
+  sparkle.frequency.exponentialRampToValueAtTime(3600, now + 0.25);
+  sg.gain.setValueAtTime(0, now + 0.05);
+  sg.gain.linearRampToValueAtTime(0.08, now + 0.07);
+  sg.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+  sparkle.connect(sg);
+  sg.connect(ctx.destination);
+  sparkle.start(now + 0.05);
+  sparkle.stop(now + 0.35);
+}
+
+function playMissSound() {
+  if (!G.soundEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  // 「ブッブー」と短く2回下降
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(220, now);
+  osc.frequency.linearRampToValueAtTime(180, now + 0.12);
+  osc.frequency.setValueAtTime(180, now + 0.16);
+  osc.frequency.linearRampToValueAtTime(140, now + 0.36);
+  // 音量エンベロープで2回鳴らす
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.15, now + 0.01);
+  gain.gain.setValueAtTime(0.15, now + 0.12);
+  gain.gain.linearRampToValueAtTime(0, now + 0.14);
+  gain.gain.linearRampToValueAtTime(0.15, now + 0.18);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+  // ローパスフィルタで丸める
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.frequency.value = 800;
+  osc.connect(filt);
+  filt.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.45);
+}
+
+function playKoSound() {
+  if (!G.soundEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  // ドラマチックな「ジャーン」風（低音の和音）
+  const freqs = [110, 138.59, 164.81]; // A2, Db3, E3
+  freqs.forEach(f => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.18, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start(now);
+    o.stop(now + 1.0);
+  });
+}
+
+function triggerCenterText(text, cls) {
+  const el = $('centerText');
+  // 一度クラスを外してリフロー、再付与でアニメ再起動
+  el.className = 'center-text';
+  el.textContent = text;
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+function triggerScreenFlash(cls) {
+  const el = $('screenFlash');
+  el.className = 'screen-flash';
+  void el.offsetWidth;
+  el.classList.add(cls);
+  setTimeout(() => { el.className = 'screen-flash'; }, 750);
+}
+
+function triggerScreenShake() {
+  const b = document.body;
+  b.classList.remove('shake');
+  void b.offsetWidth;
+  b.classList.add('shake');
+  setTimeout(() => b.classList.remove('shake'), 450);
+}
+
+function fireHitEffect() {
+  playHitSound();
+  triggerCenterText('HIT!', 'hit');
+  triggerScreenFlash('flash-hit');
+}
+
+function fireMissEffect() {
+  playMissSound();
+  triggerCenterText('MISS', 'miss');
+  triggerScreenShake();
+  triggerScreenFlash('flash-miss');
+}
+
+function fireKoEffect(name) {
+  playKoSound();
+  triggerCenterText('KO!', 'ko');
+}
+
+/* ====================================================
+ * レンダリング: ロビー
+ * ==================================================== */
+
+function renderLobby() {
+  if (!G.game) return;
+  const list = $('lobbyPlayers');
+  list.innerHTML = '';
+  G.game.players.forEach(p => {
+    const li = document.createElement('li');
+    li.className = `color-${p.color}`;
+    if (p.id === G.myPlayerId) li.classList.add('you');
+    li.innerHTML = `
+      <span class="player-chip"></span>
+      <span>${escapeHtml(p.name)}${p.id === G.myPlayerId ? '（あなた）' : ''}</span>
+      ${p.isHost ? '<span class="host-mark">HOST</span>' : ''}
+    `;
+    list.appendChild(li);
+  });
+  $('playerCount').textContent = `(${G.game.players.length}/5)`;
+  $('btnStart').disabled = G.game.players.length < 2;
+}
+
+/* ====================================================
+ * レンダリング: クライアントビュー（state受信時）
+ * ==================================================== */
+
+function renderFromView() {
+  if (!G.view) return;
+  const v = G.view;
+
+  if (v.phase === 'lobby') {
+    showScreen('Lobby');
+    renderLobbyFromView();
+  } else if (v.phase === 'topic') {
+    showScreen('Topic');
+    if (G.isHost) {
+      $('topicHostPanel').style.display = 'block';
+      $('topicGuestPanel').style.display = 'none';
+    } else {
+      $('topicHostPanel').style.display = 'none';
+      $('topicGuestPanel').style.display = 'block';
+    }
+  } else if (v.phase === 'word_entry') {
+    showScreen('Word');
+    $('wordTopic').textContent = v.topic;
+    renderWordSubmitStatus();
+    // 自分が既に提出済みの場合
+    const me = v.players.find(p => p.isMe);
+    if (me && me.hasSubmitted) {
+      $('btnSubmitWord').disabled = true;
+      $('btnSubmitWord').textContent = '提出済み';
+    }
+  } else if (v.phase === 'play') {
+    showScreen('Play');
+    renderPlayScreen();
+  } else if (v.phase === 'round_end') {
+    showScreen('End');
+    renderEndScreen();
+  }
+}
+
+function renderLobbyFromView() {
+  if (!G.view) return;
+  const list = $('lobbyPlayers');
+  list.innerHTML = '';
+  G.view.players.forEach(p => {
+    const li = document.createElement('li');
+    li.className = `color-${p.color}`;
+    if (p.isMe) li.classList.add('you');
+    li.innerHTML = `
+      <span class="player-chip"></span>
+      <span>${escapeHtml(p.name)}${p.isMe ? '（あなた）' : ''}</span>
+      ${p.isHost ? '<span class="host-mark">HOST</span>' : ''}
+    `;
+    list.appendChild(li);
+  });
+  $('playerCount').textContent = `(${G.view.players.length}/5)`;
+  if (G.isHost) {
+    $('hostControls').style.display = 'block';
+    $('guestNotice').style.display = 'none';
+    $('btnStart').disabled = G.view.players.length < 2;
+  } else {
+    $('hostControls').style.display = 'none';
+    $('guestNotice').style.display = 'block';
+  }
+}
+
+function renderWordSubmitStatus() {
+  const list = $('wordSubmitStatus');
+  list.innerHTML = '';
+  G.view.players.forEach(p => {
+    const li = document.createElement('li');
+    li.className = `color-${p.color}`;
+    li.innerHTML = `
+      <span class="player-chip"></span>
+      <span>${escapeHtml(p.name)}${p.isMe ? '（あなた）' : ''}</span>
+      <span style="margin-left: auto; font-size: 12px;">${p.hasSubmitted ? '✅ 提出済み' : '⏳ 入力中…'}</span>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function renderPlayScreen() {
+  const v = G.view;
+  $('playTopic').textContent = v.topic;
+
+  const cur = v.players[v.currentTurn];
+  $('turnName').textContent = cur ? cur.name : '---';
+
+  // 攻撃ピップ
+  const pips = $('attackPips');
+  pips.innerHTML = '';
+  for (let i = 0; i < 2; i++) {
+    const p = document.createElement('span');
+    p.className = 'pip' + (i < v.attacksThisTurn ? ' used' : '');
+    pips.appendChild(p);
+  }
+
+  // 自分のカード
+  const me = v.players.find(p => p.isMe);
+  const myBox = $('myCards');
+  myBox.innerHTML = '';
+  if (me) {
+    me.cards.forEach((c, idx) => {
+      const div = document.createElement('div');
+      div.className = 'card-mine' + (c.revealed ? ' revealed' : '') + (c.letter === 'X' ? ' x' : '');
+      div.innerHTML = `<span class="pos-label">${idx + 1}</span>${c.letter}`;
+      myBox.appendChild(div);
+    });
+  }
+
+  // 相手のカード
+  const opBox = $('opponentsList');
+  opBox.innerHTML = '';
+  v.players.filter(p => !p.isMe).forEach(p => {
+    const div = document.createElement('div');
+    div.className = `opponent color-${p.color}`;
+    if (p.eliminated) div.classList.add('eliminated');
+    if (v.players[v.currentTurn].id === p.id && !p.eliminated) div.classList.add('current-turn');
+    let cardsHtml = '';
+    p.cards.forEach((c, idx) => {
+      if (c.revealed) {
+        if (c.letter === 'X') {
+          cardsHtml += `<div class="card-mini x-revealed">×</div>`;
+        } else {
+          cardsHtml += `<div class="card-mini revealed">${c.letter}</div>`;
+        }
+      } else {
+        cardsHtml += `<div class="card-mini">?</div>`;
+      }
+    });
+    div.innerHTML = `
+      <div class="name">
+        <span class="player-chip"></span>
+        ${escapeHtml(p.name)}
+      </div>
+      <div class="cards-row">${cardsHtml}</div>
+    `;
+    opBox.appendChild(div);
+  });
+
+  // ボード
+  renderBoard();
+}
+
+function renderBoard() {
+  const v = G.view;
+  const board = v.mode === 'alphabet' ? ALPHABET_BOARD : HIRAGANA_BOARD.slice().reverse();
+  const cellsCount = board[0].length;
+  const grid = $('boardGrid');
+  grid.className = 'board ' + (v.mode === 'alphabet' ? 'board-alpha' : 'board-50on');
+  grid.innerHTML = '';
+  $('boardTitle').textContent = v.mode === 'alphabet' ? 'アルファベットボード' : '50音ボード';
+
+  const me = v.players.find(p => p.isMe);
+  const isMyTurn = v.players[v.currentTurn].id === me.id;
+
+  // 差分: 前回までのattackedLettersに無くて、今回追加された文字
+  const newlyAttacked = new Set();
+  for (const l of v.attackedLetters) {
+    if (!G.lastAttackedLetters.has(l)) newlyAttacked.add(l);
+  }
+
+  board.forEach(row => {
+    row.forEach(letter => {
+      const cell = document.createElement('div');
+      if (!letter) {
+        cell.className = 'board-cell empty';
+        grid.appendChild(cell);
+        return;
+      }
+      cell.className = 'board-cell';
+      cell.textContent = letter;
+      if (v.attackedLetters.includes(letter)) {
+        cell.classList.add('attacked');
+        if (newlyAttacked.has(letter) && v.lastAttack && v.lastAttack.letter === letter) {
+          cell.classList.add(v.lastAttack.hit ? 'just-hit' : 'just-miss');
+        }
+      } else if (!isMyTurn) {
+        cell.classList.add('disabled');
+      } else {
+        cell.onclick = () => attemptAttack(letter);
+      }
+      grid.appendChild(cell);
+    });
+  });
+
+  // 次回の差分判定用に保存
+  G.lastAttackedLetters = new Set(v.attackedLetters);
+
+  $('boardHint').textContent = isMyTurn
+    ? '自分の手番！文字をタップして攻撃。'
+    : `${v.players[v.currentTurn].name}が考え中…`;
+}
+
+function renderEndScreen() {
+  const v = G.view;
+  const winner = v.players.find(p => p.id === v.winner);
+  $('winnerName').textContent = winner ? winner.name + (winner.isMe ? '（あなた）' : '') : '???';
+  // 勝者の言葉
+  if (winner && winner.cards.length) {
+    const word = winner.cards.filter(c => c.letter !== 'X' && c.letter !== null).map(c => c.letter).join('');
+    $('winnerWord').textContent = word;
+  } else {
+    $('winnerWord').textContent = '';
+  }
+  // 全員のカードを答え合わせ表示
+  const list = $('endPlayerList');
+  list.innerHTML = '';
+  v.players.forEach(p => {
+    const word = p.cards
+      .filter(c => c.letter !== 'X' && c.letter !== null)
+      .map(c => c.letter)
+      .join('') || '(?)';
+
+    const row = document.createElement('div');
+    row.className = `end-row color-${p.color}` + (p.id === v.winner ? ' is-winner' : '');
+
+    let cardsHtml = '';
+    p.cards.forEach((c) => {
+      if (c.letter === null || c.letter === undefined) {
+        // フォールバック（state転送に問題があった場合）
+        cardsHtml += `<div class="card-mini">?</div>`;
+      } else if (c.letter === 'X') {
+        cardsHtml += `<div class="card-mini x-revealed">×</div>`;
+      } else if (c.wasRevealedDuringPlay) {
+        // ゲーム中に既に攻撃で公開されていた文字
+        cardsHtml += `<div class="card-mini revealed">${escapeHtml(c.letter)}</div>`;
+      } else {
+        // 最後まで隠せていた文字（答え合わせで初公開）
+        cardsHtml += `<div class="card-mini end-revealed-late">${escapeHtml(c.letter)}</div>`;
+      }
+    });
+
+    let badge = '';
+    if (p.id === v.winner) {
+      badge = '<span class="badge">勝者</span>';
+    } else if (p.eliminated) {
+      badge = '<span class="badge eliminated">脱落</span>';
+    }
+
+    row.innerHTML = `
+      <div class="head">
+        <span class="player-chip"></span>
+        <span class="name">${escapeHtml(p.name)}${p.isMe ? '（あなた）' : ''}</span>
+        ${badge}
+        <span class="word-text">${escapeHtml(word)}</span>
+      </div>
+      <div class="cards-row">${cardsHtml}</div>
+    `;
+    list.appendChild(row);
+  });
+
+  if (G.isHost) {
+    $('endHostPanel').style.display = 'block';
+    $('endGuestPanel').style.display = 'none';
+  } else {
+    $('endHostPanel').style.display = 'none';
+    $('endGuestPanel').style.display = 'block';
+  }
+}
+
+/* ====================================================
+ * 起動時の初期化
+ * ==================================================== */
+
+(function init() {
+  // 入力時の入力プレビュー初期化
+  updateWordPreview();
+
+  // 音声切替ボタン
+  const muteBtn = $('btnMute');
+  muteBtn.onclick = () => {
+    G.soundEnabled = !G.soundEnabled;
+    muteBtn.textContent = G.soundEnabled ? '♪ 音 ON' : '♪ 音 OFF';
+    if (G.soundEnabled) ensureAudio();
+  };
+
+  // ユーザー初操作時にAudioContextを起こす（モバイルブラウザ対策）
+  const wakeAudio = () => { ensureAudio(); };
+  ['btnHost', 'btnJoinShow', 'btnJoin'].forEach(id => {
+    const el = $(id);
+    if (el) {
+      const orig = el.onclick;
+      el.addEventListener('click', wakeAudio, { once: true });
+    }
+  });
+})();
+
+</script>
+</body>
+</html>
